@@ -1,0 +1,18 @@
+{
+  "name": "ultimate-music-bot-v2",
+  "version": "2.0.0",
+  "description": "Advanced Discord Music Bot with Dashboard & Premium",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "discord.js": "^14.14.1",
+    "erela.js": "^2.4.0",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "sqlite3": "^5.1.6",
+    "better-sqlite3": "^9.0.0"
+  }
+}
