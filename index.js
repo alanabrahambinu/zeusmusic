@@ -10,10 +10,9 @@ dotenv.config();
 process.on("unhandledRejection", console.error);
 process.on("uncaughtException", console.error);
 
-/* ---------------- START DASHBOARD FIRST (RENDER FIX) ---------------- */
+/* ---------------- START DASHBOARD ---------------- */
 startDashboard();
 
-/* ---------------- DEBUG ENV VARIABLES ---------------- */
 console.log("TOKEN exists:", !!process.env.TOKEN);
 console.log("CLIENT_ID exists:", !!process.env.CLIENT_ID);
 console.log("GUILD_ID exists:", !!process.env.GUILD_ID);
@@ -26,7 +25,7 @@ const client = new Client({
   ]
 });
 
-/* ---------------- LAVALINK MANAGER ---------------- */
+/* ---------------- LAVALINK ---------------- */
 const manager = new Manager({
   nodes: [
     {
@@ -44,16 +43,50 @@ const manager = new Manager({
 });
 
 /* ---------------- READY EVENT ---------------- */
-client.once("ready", () => {
+client.once("ready", async () => {
   console.log(`Logged in as ${client.user.tag}`);
   manager.init(client.user.id);
-});
 
-/* ---------------- VOICE STATE ---------------- */
-client.on("raw", d => manager.updateVoiceState(d));
+  // 🔥 REGISTER SLASH COMMANDS AFTER LOGIN
+  const commands = [
+    new SlashCommandBuilder()
+      .setName("play")
+      .setDescription("Play a song")
+      .addStringOption(o =>
+        o.setName("song")
+          .setDescription("Song name or YouTube link")
+          .setRequired(true)
+      ),
+    new SlashCommandBuilder()
+      .setName("queue")
+      .setDescription("Show current queue"),
+    new SlashCommandBuilder()
+      .setName("247")
+      .setDescription("Enable 24/7 mode (Premium)"),
+    new SlashCommandBuilder()
+      .setName("addpremium")
+      .setDescription("Add a user to premium list")
+      .addStringOption(o =>
+        o.setName("userid")
+          .setDescription("User ID")
+          .setRequired(true)
+      )
+  ].map(cmd => cmd.toJSON());
 
-manager.on("nodeDisconnect", () => {
-  console.log("Lavalink disconnected. Attempting reconnect...");
+  const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
+
+  try {
+    await rest.put(
+      Routes.applicationGuildCommands(
+        process.env.CLIENT_ID,
+        process.env.GUILD_ID
+      ),
+      { body: commands }
+    );
+    console.log("Slash commands registered.");
+  } catch (err) {
+    console.error("Slash registration error:", err);
+  }
 });
 
 /* ---------------- INTERACTIONS ---------------- */
@@ -64,7 +97,7 @@ client.on("interactionCreate", async interaction => {
   const voice = member.voice.channel;
 
   if (!voice)
-    return interaction.reply({ content: "Join a voice channel first.", ephemeral: true });
+    return interaction.reply({ content: "Join VC first.", ephemeral: true });
 
   let player = manager.players.get(interaction.guild.id);
 
@@ -83,90 +116,45 @@ client.on("interactionCreate", async interaction => {
     const res = await manager.search(query, interaction.user);
 
     if (!res.tracks.length)
-      return interaction.reply("No results found.");
+      return interaction.reply("No results.");
 
     player.queue.add(res.tracks[0]);
-
     if (!player.playing && !player.paused)
       player.play();
 
-    return interaction.reply(`🎵 Added to queue: **${res.tracks[0].title}**`);
+    return interaction.reply(`🎵 Added: ${res.tracks[0].title}`);
   }
 
   if (interaction.commandName === "queue") {
     if (!player || !player.queue.size)
-      return interaction.reply("Queue is empty.");
+      return interaction.reply("Queue empty.");
 
     const tracks = player.queue
       .slice(0, 10)
       .map((t, i) => `${i + 1}. ${t.title}`)
       .join("\n");
 
-    return interaction.reply(`📜 **Queue:**\n${tracks}`);
+    return interaction.reply(`📜 Queue:\n${tracks}`);
   }
 
   if (interaction.commandName === "247") {
     if (!isPremium(interaction.user.id))
-      return interaction.reply({ content: "❌ Premium only feature.", ephemeral: true });
+      return interaction.reply({ content: "Premium only.", ephemeral: true });
 
     player.set("247", true);
-    return interaction.reply("✅ 24/7 Mode Enabled.");
+    return interaction.reply("24/7 Enabled.");
   }
 
   if (interaction.commandName === "addpremium") {
     addPremium(interaction.options.getString("userid"));
-    return interaction.reply("✅ User added to premium.");
+    return interaction.reply("User added to premium.");
   }
 });
 
-/* ---------------- REGISTER SLASH COMMANDS ---------------- */
-const commands = [
-  new SlashCommandBuilder()
-    .setName("play")
-    .setDescription("Play a song")
-    .addStringOption(o =>
-      o.setName("song")
-        .setDescription("Song name or YouTube link")
-        .setRequired(true)
-    ),
+/* ---------------- VOICE STATE ---------------- */
+client.on("raw", d => manager.updateVoiceState(d));
 
-  new SlashCommandBuilder()
-    .setName("queue")
-    .setDescription("Show current queue"),
-
-  new SlashCommandBuilder()
-    .setName("247")
-    .setDescription("Enable 24/7 mode (Premium)"),
-
-  new SlashCommandBuilder()
-    .setName("addpremium")
-    .setDescription("Add a user to premium list")
-    .addStringOption(o =>
-      o.setName("userid")
-        .setDescription("User ID")
-        .setRequired(true)
-    )
-
-].map(cmd => cmd.toJSON());
-
-const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
-
-(async () => {
-  try {
-    await rest.put(
-      Routes.applicationGuildCommands(
-        process.env.CLIENT_ID,
-        process.env.GUILD_ID
-      ),
-      { body: commands }
-    );
-    console.log("Slash commands registered.");
-  } catch (err) {
-    console.error("Slash command error:", err);
-  }
-})();
-
-/* ---------------- DISCORD LOGIN ---------------- */
+/* ---------------- LOGIN ---------------- */
 client.login(process.env.TOKEN)
   .then(() => console.log("Discord login successful"))
   .catch(err => console.error("Login error:", err));
