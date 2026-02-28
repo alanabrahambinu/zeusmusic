@@ -28,7 +28,7 @@ const manager = new Manager({
 client.once("ready", () => {
   console.log(`Logged in as ${client.user.tag}`);
   manager.init(client.user.id);
-  startDashboard(process.env.PORT || 3000);
+  startDashboard();
 });
 
 client.on("raw", d => manager.updateVoiceState(d));
