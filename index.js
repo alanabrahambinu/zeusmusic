@@ -1,12 +1,10 @@
 import { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes } from 'discord.js';
-import { Manager } from 'erela.js';
 import dotenv from 'dotenv';
 import { startDashboard } from './dashboard.js';
 import { addPremium, isPremium } from './database.js';
 
 dotenv.config();
 
-/* ---------------- ERROR HANDLING ---------------- */
 process.on("unhandledRejection", console.error);
 process.on("uncaughtException", console.error);
 
@@ -14,8 +12,6 @@ process.on("uncaughtException", console.error);
 startDashboard();
 
 console.log("TOKEN exists:", !!process.env.TOKEN);
-console.log("CLIENT_ID exists:", !!process.env.CLIENT_ID);
-console.log("GUILD_ID exists:", !!process.env.GUILD_ID);
 
 /* ---------------- DISCORD CLIENT ---------------- */
 const client = new Client({
@@ -25,50 +21,18 @@ const client = new Client({
   ]
 });
 
-/* ---------------- LAVALINK ---------------- */
-const manager = new Manager({
-  nodes: [
-    {
-      host: "pnode1.danbot.host",
-      port: 1351,
-      password: "cocaine",
-      secure: false
-    }
-  ],
-  autoPlay: true,
-  send(id, payload) {
-    const guild = client.guilds.cache.get(id);
-    if (guild) guild.shard.send(payload);
-  }
-});
-
 /* ---------------- READY EVENT ---------------- */
 client.once("ready", async () => {
   console.log(`Logged in as ${client.user.tag}`);
-  manager.init(client.user.id);
 
-  // 🔥 REGISTER SLASH COMMANDS AFTER LOGIN
+  // Register slash commands AFTER login
   const commands = [
     new SlashCommandBuilder()
       .setName("play")
-      .setDescription("Play a song")
+      .setDescription("Test command")
       .addStringOption(o =>
         o.setName("song")
-          .setDescription("Song name or YouTube link")
-          .setRequired(true)
-      ),
-    new SlashCommandBuilder()
-      .setName("queue")
-      .setDescription("Show current queue"),
-    new SlashCommandBuilder()
-      .setName("247")
-      .setDescription("Enable 24/7 mode (Premium)"),
-    new SlashCommandBuilder()
-      .setName("addpremium")
-      .setDescription("Add a user to premium list")
-      .addStringOption(o =>
-        o.setName("userid")
-          .setDescription("User ID")
+          .setDescription("Song name")
           .setRequired(true)
       )
   ].map(cmd => cmd.toJSON());
@@ -85,74 +49,9 @@ client.once("ready", async () => {
     );
     console.log("Slash commands registered.");
   } catch (err) {
-    console.error("Slash registration error:", err);
+    console.error(err);
   }
 });
-
-/* ---------------- INTERACTIONS ---------------- */
-client.on("interactionCreate", async interaction => {
-  if (!interaction.isChatInputCommand()) return;
-
-  const member = interaction.member;
-  const voice = member.voice.channel;
-
-  if (!voice)
-    return interaction.reply({ content: "Join VC first.", ephemeral: true });
-
-  let player = manager.players.get(interaction.guild.id);
-
-  if (!player) {
-    player = manager.create({
-      guild: interaction.guild.id,
-      voiceChannel: voice.id,
-      textChannel: interaction.channel.id,
-      selfDeafen: true
-    });
-    player.connect();
-  }
-
-  if (interaction.commandName === "play") {
-    const query = interaction.options.getString("song");
-    const res = await manager.search(query, interaction.user);
-
-    if (!res.tracks.length)
-      return interaction.reply("No results.");
-
-    player.queue.add(res.tracks[0]);
-    if (!player.playing && !player.paused)
-      player.play();
-
-    return interaction.reply(`🎵 Added: ${res.tracks[0].title}`);
-  }
-
-  if (interaction.commandName === "queue") {
-    if (!player || !player.queue.size)
-      return interaction.reply("Queue empty.");
-
-    const tracks = player.queue
-      .slice(0, 10)
-      .map((t, i) => `${i + 1}. ${t.title}`)
-      .join("\n");
-
-    return interaction.reply(`📜 Queue:\n${tracks}`);
-  }
-
-  if (interaction.commandName === "247") {
-    if (!isPremium(interaction.user.id))
-      return interaction.reply({ content: "Premium only.", ephemeral: true });
-
-    player.set("247", true);
-    return interaction.reply("24/7 Enabled.");
-  }
-
-  if (interaction.commandName === "addpremium") {
-    addPremium(interaction.options.getString("userid"));
-    return interaction.reply("User added to premium.");
-  }
-});
-
-/* ---------------- VOICE STATE ---------------- */
-client.on("raw", d => manager.updateVoiceState(d));
 
 /* ---------------- LOGIN ---------------- */
 client.login(process.env.TOKEN)
