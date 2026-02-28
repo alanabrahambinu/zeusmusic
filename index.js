@@ -1,59 +1,38 @@
-import { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes } from 'discord.js';
+import { Client, GatewayIntentBits } from 'discord.js';
 import dotenv from 'dotenv';
 import { startDashboard } from './dashboard.js';
-import { addPremium, isPremium } from './database.js';
 
 dotenv.config();
 
+/* -------- ERROR HANDLING -------- */
 process.on("unhandledRejection", console.error);
 process.on("uncaughtException", console.error);
 
-/* ---------------- START DASHBOARD ---------------- */
+/* -------- START DASHBOARD -------- */
 startDashboard();
 
-console.log("TOKEN exists:", !!process.env.TOKEN);
+/* -------- DEBUG ENV -------- */
+console.log("TOKEN length:", process.env.TOKEN ? process.env.TOKEN.length : "MISSING");
 
-/* ---------------- DISCORD CLIENT ---------------- */
+/* -------- DISCORD CLIENT -------- */
 const client = new Client({
   intents: [
-    GatewayIntentBits.Guilds,
-    GatewayIntentBits.GuildVoiceStates
+    GatewayIntentBits.Guilds
   ]
 });
 
-/* ---------------- READY EVENT ---------------- */
-client.once("ready", async () => {
-  console.log(`Logged in as ${client.user.tag}`);
-
-  // Register slash commands AFTER login
-  const commands = [
-    new SlashCommandBuilder()
-      .setName("play")
-      .setDescription("Test command")
-      .addStringOption(o =>
-        o.setName("song")
-          .setDescription("Song name")
-          .setRequired(true)
-      )
-  ].map(cmd => cmd.toJSON());
-
-  const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
-
-  try {
-    await rest.put(
-      Routes.applicationGuildCommands(
-        process.env.CLIENT_ID,
-        process.env.GUILD_ID
-      ),
-      { body: commands }
-    );
-    console.log("Slash commands registered.");
-  } catch (err) {
-    console.error(err);
-  }
+/* -------- READY EVENT -------- */
+client.once("ready", () => {
+  console.log(`✅ Logged in as ${client.user.tag}`);
 });
 
-/* ---------------- LOGIN ---------------- */
-client.login(process.env.TOKEN)
-  .then(() => console.log("Discord login successful"))
-  .catch(err => console.error("Login error:", err));
+/* -------- LOGIN -------- */
+(async () => {
+  try {
+    await client.login(process.env.TOKEN);
+    console.log("✅ Discord login successful");
+  } catch (err) {
+    console.error("❌ Login failed:");
+    console.error(err);
+  }
+})();
