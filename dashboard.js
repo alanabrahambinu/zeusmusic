@@ -1,11 +1,14 @@
-
 import express from 'express';
+
 const app = express();
 
 app.get('/', (req, res) => {
-  res.send('<h1>Ultimate Music Bot Dashboard</h1><p>Bot is running successfully.</p>');
+  res.send('Zeus Music Bot Dashboard Running 🚀');
 });
 
-export function startDashboard(port) {
-  app.listen(port, () => console.log(`Dashboard running on port ${port}`));
+export function startDashboard() {
+  const PORT = process.env.PORT || 10000;
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Dashboard running on port ${PORT}`);
+  });
 }
