@@ -6,10 +6,19 @@ import { addPremium, isPremium } from './database.js';
 
 dotenv.config();
 
-/* -------------------- START DASHBOARD IMMEDIATELY (RENDER FIX) -------------------- */
-startDashboard(); // 🔥 This must run BEFORE Discord login
+/* ---------------- ERROR HANDLING ---------------- */
+process.on("unhandledRejection", console.error);
+process.on("uncaughtException", console.error);
 
-/* -------------------- DISCORD CLIENT -------------------- */
+/* ---------------- START DASHBOARD FIRST (RENDER FIX) ---------------- */
+startDashboard();
+
+/* ---------------- DEBUG ENV VARIABLES ---------------- */
+console.log("TOKEN exists:", !!process.env.TOKEN);
+console.log("CLIENT_ID exists:", !!process.env.CLIENT_ID);
+console.log("GUILD_ID exists:", !!process.env.GUILD_ID);
+
+/* ---------------- DISCORD CLIENT ---------------- */
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -17,7 +26,7 @@ const client = new Client({
   ]
 });
 
-/* -------------------- LAVALINK MANAGER -------------------- */
+/* ---------------- LAVALINK MANAGER ---------------- */
 const manager = new Manager({
   nodes: [
     {
@@ -34,20 +43,20 @@ const manager = new Manager({
   }
 });
 
-/* -------------------- READY EVENT -------------------- */
+/* ---------------- READY EVENT ---------------- */
 client.once("ready", () => {
   console.log(`Logged in as ${client.user.tag}`);
   manager.init(client.user.id);
 });
 
-/* -------------------- VOICE STATE -------------------- */
+/* ---------------- VOICE STATE ---------------- */
 client.on("raw", d => manager.updateVoiceState(d));
 
 manager.on("nodeDisconnect", () => {
   console.log("Lavalink disconnected. Attempting reconnect...");
 });
 
-/* -------------------- INTERACTIONS -------------------- */
+/* ---------------- INTERACTIONS ---------------- */
 client.on("interactionCreate", async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
@@ -69,7 +78,6 @@ client.on("interactionCreate", async interaction => {
     player.connect();
   }
 
-  /* -------- PLAY -------- */
   if (interaction.commandName === "play") {
     const query = interaction.options.getString("song");
     const res = await manager.search(query, interaction.user);
@@ -85,7 +93,6 @@ client.on("interactionCreate", async interaction => {
     return interaction.reply(`🎵 Added to queue: **${res.tracks[0].title}**`);
   }
 
-  /* -------- QUEUE -------- */
   if (interaction.commandName === "queue") {
     if (!player || !player.queue.size)
       return interaction.reply("Queue is empty.");
@@ -98,7 +105,6 @@ client.on("interactionCreate", async interaction => {
     return interaction.reply(`📜 **Queue:**\n${tracks}`);
   }
 
-  /* -------- 24/7 MODE (PREMIUM) -------- */
   if (interaction.commandName === "247") {
     if (!isPremium(interaction.user.id))
       return interaction.reply({ content: "❌ Premium only feature.", ephemeral: true });
@@ -107,14 +113,13 @@ client.on("interactionCreate", async interaction => {
     return interaction.reply("✅ 24/7 Mode Enabled.");
   }
 
-  /* -------- ADD PREMIUM -------- */
   if (interaction.commandName === "addpremium") {
     addPremium(interaction.options.getString("userid"));
     return interaction.reply("✅ User added to premium.");
   }
 });
 
-/* -------------------- SLASH COMMAND REGISTRATION -------------------- */
+/* ---------------- REGISTER SLASH COMMANDS ---------------- */
 const commands = [
   new SlashCommandBuilder()
     .setName("play")
@@ -157,9 +162,11 @@ const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
     );
     console.log("Slash commands registered.");
   } catch (err) {
-    console.error(err);
+    console.error("Slash command error:", err);
   }
 })();
 
-/* -------------------- LOGIN -------------------- */
-client.login(process.env.TOKEN);
+/* ---------------- DISCORD LOGIN ---------------- */
+client.login(process.env.TOKEN)
+  .then(() => console.log("Discord login successful"))
+  .catch(err => console.error("Login error:", err));
