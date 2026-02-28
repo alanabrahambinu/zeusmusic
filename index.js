@@ -1,8 +1,21 @@
+import express from "express";
 import { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes } from "discord.js";
 import { Manager } from "erela.js";
 import dotenv from "dotenv";
 
 dotenv.config();
+
+/* ================= EXPRESS SERVER (RENDER FIX) ================= */
+const app = express();
+const PORT = process.env.PORT || 10000;
+
+app.get("/", (req, res) => {
+  res.send("Zeus Music Bot Running 🚀");
+});
+
+app.listen(PORT, "0.0.0.0", () => {
+  console.log(`🌐 Web server running on port ${PORT}`);
+});
 
 /* ================= ERROR HANDLING ================= */
 process.on("unhandledRejection", console.error);
@@ -26,6 +39,7 @@ const manager = new Manager({
       secure: false
     }
   ],
+  autoPlay: true,
   send(id, payload) {
     const guild = client.guilds.cache.get(id);
     if (guild) guild.shard.send(payload);
@@ -38,7 +52,7 @@ client.once("ready", async () => {
 
   manager.init(client.user.id);
 
-  // Register Slash Commands AFTER login
+  // Slash command registration
   const commands = [
     new SlashCommandBuilder()
       .setName("play")
@@ -66,24 +80,29 @@ client.once("ready", async () => {
   }
 });
 
-/* ================= LAVALINK EVENTS ================= */
+/* ================= VOICE STATE ================= */
 client.on("raw", d => manager.updateVoiceState(d));
 
-manager.on("nodeConnect", () => {
-  console.log("✅ Lavalink connected");
+/* ================= LAVALINK EVENTS ================= */
+manager.on("nodeConnect", node => {
+  console.log(`✅ Lavalink connected: ${node.options.host}`);
 });
 
 manager.on("nodeError", (node, error) => {
   console.error("❌ Lavalink error:", error);
 });
 
-/* ================= COMMAND HANDLER ================= */
+manager.on("nodeDisconnect", (node) => {
+  console.log("⚠️ Lavalink disconnected. Reconnecting...");
+});
+
+/* ================= PLAY COMMAND ================= */
 client.on("interactionCreate", async interaction => {
   if (!interaction.isChatInputCommand()) return;
 
   if (interaction.commandName === "play") {
-    const voiceChannel = interaction.member.voice.channel;
 
+    const voiceChannel = interaction.member.voice.channel;
     if (!voiceChannel)
       return interaction.reply({
         content: "❌ Join a voice channel first.",
