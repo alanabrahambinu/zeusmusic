@@ -1,4 +1,5 @@
 import express from 'express';
+import { config } from './config.js';
 
 const app = express();
 
@@ -7,7 +8,7 @@ app.get('/', (req, res) => {
 });
 
 export function startDashboard() {
-  const PORT = process.env.PORT || 10000;
+  const PORT = config.port;
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`Dashboard running on port ${PORT}`);
   });
