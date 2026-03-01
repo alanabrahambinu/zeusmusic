@@ -1,6 +1,7 @@
-
 import Database from 'better-sqlite3';
-const db = new Database('premium.db');
+import { config } from './config.js';
+
+const db = new Database(config.dbPath);
 
 db.prepare(`
 CREATE TABLE IF NOT EXISTS premium (
