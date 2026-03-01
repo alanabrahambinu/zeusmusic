@@ -1,0 +1,16 @@
+version: '3.8'
+services:
+  bot:
+    build: .
+    environment:
+      - TOKEN=${TOKEN}
+      - CLIENT_ID=${CLIENT_ID}
+      - GUILD_ID=${GUILD_ID}
+      - LAVALINK_HOST=${LAVALINK_HOST}
+      - LAVALINK_PORT=${LAVALINK_PORT}
+      - LAVALINK_PASSWORD=${LAVALINK_PASSWORD}
+      - PORT=10000
+    ports:
+      - "10000:10000"
+    volumes:
+      - ./premium.db:/app/premium.db
