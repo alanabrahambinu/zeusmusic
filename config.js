@@ -10,9 +10,9 @@ export const config = {
   
   // Lavalink Configuration
   lavalink: {
-    host: process.env.LAVALINK_HOST || "pnode1.danbot.host",
-    port: parseInt(process.env.LAVALINK_PORT) || 1351,
-    password: process.env.LAVALINK_PASSWORD || "cocaine",
+    host: process.env.LAVALINK_HOST || "lava-v3.ajieblogs.eu.org",
+    port: parseInt(process.env.LAVALINK_PORT) || 80,
+    password: process.env.LAVALINK_PASSWORD || "https://dsc.gg/ajidevserver",
     secure: process.env.LAVALINK_SECURE === 'true' || false
   },
   
