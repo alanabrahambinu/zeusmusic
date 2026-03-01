@@ -1,13 +1,11 @@
 import express from "express";
 import { Client, GatewayIntentBits, SlashCommandBuilder, REST, Routes } from "discord.js";
 import { Manager } from "erela.js";
-import dotenv from "dotenv";
-
-dotenv.config();
+import { config } from "./config.js";
 
 /* ================= EXPRESS SERVER (RENDER FIX) ================= */
 const app = express();
-const PORT = process.env.PORT || 10000;
+const PORT = config.port;
 
 app.get("/", (req, res) => {
   res.send("Zeus Music Bot Running 🚀");
@@ -33,10 +31,10 @@ const client = new Client({
 const manager = new Manager({
   nodes: [
     {
-      host: "pnode1.danbot.host",
-      port: 1351,
-      password: "cocaine",
-      secure: false
+      host: config.lavalink.host,
+      port: config.lavalink.port,
+      password: config.lavalink.password,
+      secure: config.lavalink.secure
     }
   ],
   autoPlay: true,
@@ -64,13 +62,13 @@ client.once("ready", async () => {
       )
   ].map(cmd => cmd.toJSON());
 
-  const rest = new REST({ version: "10" }).setToken(process.env.TOKEN);
+  const rest = new REST({ version: "10" }).setToken(config.token);
 
   try {
     await rest.put(
       Routes.applicationGuildCommands(
-        process.env.CLIENT_ID,
-        process.env.GUILD_ID
+        config.clientId,
+        config.guildId
       ),
       { body: commands }
     );
@@ -137,6 +135,6 @@ client.on("interactionCreate", async interaction => {
 });
 
 /* ================= LOGIN ================= */
-client.login(process.env.TOKEN)
+client.login(config.token)
   .then(() => console.log("✅ Discord login successful"))
   .catch(err => console.error("❌ Login error:", err));
